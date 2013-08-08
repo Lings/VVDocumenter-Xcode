@@ -23,7 +23,7 @@
 
 -(NSString *) startComment
 {
-    return [NSString stringWithFormat:@"%@/**\n%@ *\t<#%@#>\n",self.indent,self.indent,@"Description"];
+    return [NSString stringWithFormat:@"%@/**\n%@ *\t@brief\t<#%@#>\n",self.indent,self.indent,@"Description"];
 }
 
 -(NSString *) argumentsComment
