@@ -8,6 +8,11 @@
 
 #import "VVBaseCommenter.h"
 #import "VVArgument.h"
+#import "VVDocumenterSetting.h"
+
+@interface VVBaseCommenter()
+@property (nonatomic, copy) NSString *space;
+@end
 
 @implementation VVBaseCommenter
 -(id) initWithIndentString:(NSString *)indent codeString:(NSString *)code
@@ -17,61 +22,113 @@
         self.indent = indent;
         self.code = code;
         self.arguments = [NSMutableArray array];
+        self.space = [[VVDocumenterSetting defaultSetting] spacesString];
     }
     return self;
 }
 
 -(NSString *) startComment
 {
-    return [NSString stringWithFormat:@"%@/**\n%@ *\t@brief\t<#%@#>\n",self.indent,self.indent,@"Description"];
+//    return [NSString stringWithFormat:@"%@/**\n%@ *\t@brief\t<#%@#>\n",self.indent,self.indent,@"Description"];
+    if ([[VVDocumenterSetting defaultSetting] useHeaderDoc]) {
+        return [NSString stringWithFormat:@"%@/*!\n%@<#Description#>\n", self.indent, self.prefixString];
+    } else if ([[VVDocumenterSetting defaultSetting] prefixWithSlashes]) {
+        return [NSString stringWithFormat:@"%@<#Description#>\n", self.prefixString];
+    } else {
+        return [NSString stringWithFormat:@"%@/**\n%@<#Description#>\n", self.indent, self.prefixString];
+    }
 }
 
 -(NSString *) argumentsComment
 {
-    NSMutableString *result = [NSMutableString stringWithString:@""];
+    if (self.arguments.count == 0)
+        return @"";
+    
+    // start of with an empty line
+    NSMutableString *result = [NSMutableString stringWithFormat:@"%@", self.emptyLine];
+    
+    int longestNameLength = [[self.arguments valueForKeyPath:@"@max.name.length"] intValue];
+    
     for (VVArgument *arg in self.arguments) {
-        if (result.length == 0) {
-            [result appendFormat:@"%@ *\n",self.indent];
-        }
-        [result appendFormat:@"%@ *\t@param\t%@\t<#%@ description#>\n",self.indent,arg.name,arg.name];
+        NSString *paddedName = [arg.name stringByPaddingToLength:longestNameLength withString:@" " startingAtIndex:0];
+        
+        [result appendFormat:@"%@@param %@ <#%@ description#>\n", self.prefixString, paddedName, arg.name];
     }
     return result;
 }
 
 -(NSString *) returnComment
-
 {
     if (!self.hasReturn) {
         return @"";
     } else {
-        return [NSString stringWithFormat:@"%@ *\n%@ *\t@return\t<#return value description#>\n",self.indent,self.indent];
+        return [NSString stringWithFormat:@"%@%@@return <#return value description#>\n", self.emptyLine, self.prefixString];
+    }
+}
+
+-(NSString *) sinceComment
+{
+    if ([[VVDocumenterSetting defaultSetting] addSinceToComments]) {
+        return [NSString stringWithFormat:@"%@%@@since <#version number#>\n", self.emptyLine, self.prefixString];
+    } else {
+        return @"";
     }
 }
 
 -(NSString *) endComment
 {
-    return [NSString stringWithFormat:@"%@ */",self.indent];
+    if ([[VVDocumenterSetting defaultSetting] prefixWithSlashes]) {
+        return @"";
+    } else {
+        return [NSString stringWithFormat:@"%@ */",self.indent];
+    }
 }
 
 -(NSString *) document
 {
-    return [NSString stringWithFormat:@"%@%@%@%@",[self startComment],
-                                                  [self argumentsComment],
-                                                  [self returnComment],
-                                                  [self endComment]];
+    NSString * comment = [NSString stringWithFormat:@"%@%@%@%@%@",
+                          [self startComment],
+                          [self argumentsComment],
+                          [self returnComment],
+                          [self sinceComment],
+                          [self endComment]];
+
+    // The last line of the comment should be adjacent to the next line of code,
+    // back off the newline from the last comment component.
+    if ([[VVDocumenterSetting defaultSetting] prefixWithSlashes]) {
+        return [comment stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    } else {
+        return comment;
+    }
+}
+
+-(NSString *) emptyLine
+{
+    return [NSString stringWithFormat:@"%@\n", self.prefixString];
+}
+
+-(NSString *) prefixString
+{
+    if ([[VVDocumenterSetting defaultSetting] prefixWithStar]) {
+        return [NSString stringWithFormat:@"%@ *%@", self.indent, self.space];
+    } else if ([[VVDocumenterSetting defaultSetting] prefixWithSlashes]) {
+        return [NSString stringWithFormat:@"%@///%@", self.indent, self.space];
+    } else {
+        return [NSString stringWithFormat:@"%@ ", self.indent];
+    }
 }
 
 -(void) parseArguments
 {
     [self.arguments removeAllObjects];
-    NSArray * braceGroups = [self.code stringsByExtractingGroupsUsingRegexPattern:@"\\(([^\\(\\)]*)\\)"];
+    NSArray * braceGroups = [self.code vv_stringsByExtractingGroupsUsingRegexPattern:@"\\(([^\\^][^\\(\\)]*)\\)"];
     if (braceGroups.count > 0) {
         NSString *argumentGroupString = braceGroups[0];
         NSArray *argumentStrings = [argumentGroupString componentsSeparatedByString:@","];
-        for (NSString *argumentString in argumentStrings) {
+        for (__strong NSString *argumentString in argumentStrings) {
             VVArgument *arg = [[VVArgument alloc] init];
-            argumentString = [argumentString stringByReplacingRegexPattern:@"\\s+$" withString:@""];
-            argumentString = [argumentString stringByReplacingRegexPattern:@"\\s+" withString:@" "];
+            argumentString = [argumentString vv_stringByReplacingRegexPattern:@"\\s+$" withString:@""];
+            argumentString = [argumentString vv_stringByReplacingRegexPattern:@"\\s+" withString:@" "];
             NSMutableArray *tempArgs = [[argumentString componentsSeparatedByString:@" "] mutableCopy];
             while ([[tempArgs lastObject] isEqualToString:@" "]) {
                 [tempArgs removeLastObject];

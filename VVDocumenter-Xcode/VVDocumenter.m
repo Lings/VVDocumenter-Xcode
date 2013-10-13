@@ -13,6 +13,7 @@
 @interface VVDocumenter()
 
 @property (nonatomic, copy) NSString *code;
+@property (nonatomic, assign) BOOL isEnum;
 
 @end
 
@@ -22,18 +23,24 @@
 {
     self = [super init];
     if (self) {
-        //Trim the space around the braces
-        //Then trim the new line character
-        self.code = [[code stringByReplacingRegexPattern:@"\\s*(\\(.*\?\\))\\s*" withString:@"$1"]
-                           stringByReplacingRegexPattern:@"\\s*\n\\s*"           withString:@" "];
+        self.isEnum = NO;
         
+        if ([code vv_isEnum]) {
+            self.code = code;
+            self.isEnum = YES;
+        } else {
+            //Trim the space around the braces
+            //Then trim the new line character
+            self.code = [[code vv_stringByReplacingRegexPattern:@"\\s*(\\(.*\?\\))\\s*" withString:@"$1"]
+                               vv_stringByReplacingRegexPattern:@"\\s*\n\\s*"           withString:@" "];
+        }
     }
     return self;
 }
 
 -(NSString *) baseIndentation
 {
-    NSArray *matchedSpaces = [self.code stringsByExtractingGroupsUsingRegexPattern:@"^(\\s*)"];
+    NSArray *matchedSpaces = [self.code vv_stringsByExtractingGroupsUsingRegexPattern:@"^(\\s*)"];
     if (matchedSpaces.count > 0) {
         return matchedSpaces[0];
     } else {
@@ -47,20 +54,21 @@
     NSString *baseIndent = [self baseIndentation];
     
     VVBaseCommenter *commenter = nil;
-    if ([trimCode isObjCMethod]) {
-        commenter = [[VVMethodCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
-    } else if ([trimCode isProperty]) {
-        commenter = [[VVPropertyCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
-    } else if ([trimCode isCFunction]) {
-        commenter = [[VVFunctionCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
-    } else if ([trimCode isMacro]) {
-        commenter = [[VVMacroCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
-    } else if ([trimCode isStruct]) {
-        commenter = [[VVStructCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
-    } else if ([trimCode isUnion]) {
-        commenter = [[VVStructCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
-    } else if ([trimCode isEnum]) {
+    
+    if (self.isEnum) {    
         commenter = [[VVEnumCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
+    } else if ([trimCode vv_isProperty]) {
+        commenter = [[VVPropertyCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
+    } else if ([trimCode vv_isCFunction]) {
+        commenter = [[VVFunctionCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
+    } else if ([trimCode vv_isMacro]) {
+        commenter = [[VVMacroCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
+    } else if ([trimCode vv_isStruct]) {
+        commenter = [[VVStructCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
+    } else if ([trimCode vv_isUnion]) {
+        commenter = [[VVStructCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
+    } else if ([trimCode vv_isObjCMethod]) {
+        commenter = [[VVMethodCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
     } else {
         commenter = [[VVVariableCommenter alloc] initWithIndentString:baseIndent codeString:trimCode];
     }
