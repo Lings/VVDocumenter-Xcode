@@ -7,6 +7,7 @@
 //
 
 #import "VVDocumenterSetting.h"
+#import <Carbon/Carbon.h>
 
 NSString *const VVDDefaultTriggerString = @"///";
 
@@ -17,6 +18,7 @@ NSString *const kVVDPrefixWithStar = @"com.onevcat.VVDocumenter.prefixWithStar";
 NSString *const kVVDPrefixWithSlashes = @"com.onevcat.VVDocumenter.prefixWithSlashes";
 NSString *const kVVDAddSinceToComments = @"com.onevcat.VVDocumenter.addSinceToComments";
 NSString *const kVVDUserHeaderDoc = @"com.onevcat.VVDocumenter.useHeaderDoc";
+NSString *const kVVDNoBlankLinesBetweenFields = @"com.onevcat.VVDocumenter.noBlankLinesBetweenFields";
 @implementation VVDocumenterSetting
 
 + (VVDocumenterSetting *)defaultSetting
@@ -42,6 +44,18 @@ NSString *const kVVDUserHeaderDoc = @"com.onevcat.VVDocumenter.useHeaderDoc";
 {
     [[NSUserDefaults standardUserDefaults] setBool:useSpace forKey:kVVDUseSpaces];
     [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+-(BOOL) useDvorakLayout
+{
+    TISInputSourceRef inputSource = TISCopyCurrentKeyboardLayoutInputSource();
+    NSString *layoutID = (__bridge NSString *)TISGetInputSourceProperty(inputSource, kTISPropertyInputSourceID);
+    CFRelease(inputSource);
+    if ([layoutID isEqualToString:@"com.apple.keylayout.Dvorak"]) {
+        return YES;
+    } else {
+        return NO;
+    }
 }
 
 -(NSInteger) spaceCount
@@ -122,6 +136,16 @@ NSString *const kVVDUserHeaderDoc = @"com.onevcat.VVDocumenter.useHeaderDoc";
 -(void) setUseHeaderDoc:(BOOL)use
 {
     [[NSUserDefaults standardUserDefaults] setBool:use forKey:kVVDUserHeaderDoc];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+-(BOOL) blankLinesBetweenSections
+{
+    return ![[NSUserDefaults standardUserDefaults] boolForKey:kVVDNoBlankLinesBetweenFields];
+}
+-(void) setBlankLinesBetweenSections:(BOOL)blankLinesBetweenFields
+{
+    [[NSUserDefaults standardUserDefaults] setBool:!blankLinesBetweenFields forKey:kVVDNoBlankLinesBetweenFields];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
 

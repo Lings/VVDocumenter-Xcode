@@ -16,6 +16,11 @@
                   vv_stringByReplacingRegexPattern:@"\\s*\n\\s*"           withString:@" "];
 }
 
+-(NSString *) vv_stringByTrimEndSpaces
+{
+    return [self vv_stringByReplacingRegexPattern:@"\\s*\n" withString:@"\n"];
+}
+
 -(BOOL) vv_isObjCMethod
 {
     return [self vv_matchesPatternRegexPattern:@"^\\s*[+-]"];
@@ -43,7 +48,7 @@
 
 -(BOOL) vv_isEnum
 {
-    return [self vv_matchesPatternRegexPattern:@"^\\s*(\\w+\\s+)?NS_ENUM.*\\{"];
+    return [self vv_matchesPatternRegexPattern:@"^\\s*(\\w+\\s+)?NS_(ENUM|OPTIONS)\\b"];
 }
 
 -(BOOL) vv_isUnion
